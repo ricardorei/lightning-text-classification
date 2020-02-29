@@ -296,7 +296,7 @@ class BERTClassifier(pl.LightningModule):
         )
         parser.add_argument(
             "--class_weights",
-            default="5.7,1.0",
+            default="3.1,1.0",
             type=str,
             help="Weights for each of the classes we want to tag.",
         )
