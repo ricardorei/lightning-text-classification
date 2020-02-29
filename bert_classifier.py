@@ -66,10 +66,13 @@ class BERTClassifier(pl.LightningModule):
 
     def __build_loss(self):
         """ Initializes the loss function/s. """
-        weights = [float(x) for x in self.hparams.class_weights.split(",")]
-        self._loss = nn.CrossEntropyLoss(
-            weight=torch.tensor(weights, dtype=torch.float32), reduction="sum"
-        )
+        if self.hparams.class_weights != "ignore":
+            weights = [float(x) for x in self.hparams.class_weights.split(",")]
+            self._loss = nn.CrossEntropyLoss(
+                weight=torch.tensor(weights, dtype=torch.float32), reduction="sum"
+            )
+        else:
+            self._loss = nn.CrossEntropyLoss(reduction="sum")
 
     def unfreeze_encoder(self) -> None:
         """ un-freezes the encoder layer. """
@@ -321,7 +324,7 @@ class BERTClassifier(pl.LightningModule):
         )
         parser.add_argument(
             "--class_weights",
-            default="3.1,1.0",
+            default="ignore",
             type=str,
             help="Weights for each of the classes we want to tag.",
         )
