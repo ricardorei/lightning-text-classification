@@ -45,6 +45,7 @@ def main(hparams) -> None:
         min_epochs=hparams.min_epochs,
         accumulate_grad_batches=hparams.accumulate_grad_batches,
         log_gpu_memory=hparams.log_gpu_memory,
+        val_percent_check=hparams.val_percent_check,
     )
 
     # --------------------------------
@@ -153,6 +154,14 @@ if __name__ == "__main__":
         default=None,
         help="Uses the output of nvidia-smi to log GPU usage. \
             Might slow performance.",
+    )  
+
+    parser.add_argument(
+        "--val_percent_check",
+        default=1.0,
+        type=float,
+        help="If you don't want to use the entire dev set (for debugging or \
+            if it's huge), set how much of the dev set you want to use with this flag.",
     )
 
     # each LightningModule defines arguments relevant to it
