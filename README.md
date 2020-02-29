@@ -81,7 +81,6 @@ python training.py \
     --distributed_backend dp \
     --batch_size 16 \
     --loader_workers 12 \
-    --val_percent_check 0.2 \
     --nr_frozen_epochs 1
 ```
 
