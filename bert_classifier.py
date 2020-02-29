@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging as log
 from collections import OrderedDict
+import sys
 
 import torch
 import torch.nn as nn
@@ -35,6 +36,13 @@ class BERTClassifier(pl.LightningModule):
         # Loss criterion initialization.
         self.__build_loss()
 
+        if hparams.nr_frozen_epochs > 0:
+            self._frozen = True
+            self.freeze_encoder()
+        else:
+            self._frozen = False
+        self.nr_frozen_epochs = hparams.nr_frozen_epochs
+
     def __build_model(self) -> None:
         """ Init BERT model + tokenizer + classification head."""
         self.bert = BertModel.from_pretrained(
@@ -45,7 +53,7 @@ class BERTClassifier(pl.LightningModule):
         self.tokenizer = BERTTextEncoder("bert-base-uncased")
 
         # Label Encoder
-        self.label_set = {"negative": 0, "positive": 1}
+        self.label_set = {"neg": 0, "pos": 1}
         self.label_encoder = LabelEncoder(
             list(self.label_set.keys()), reserved_labels=[]
         )
@@ -62,6 +70,18 @@ class BERTClassifier(pl.LightningModule):
         self._loss = nn.CrossEntropyLoss(
             weight=torch.tensor(weights, dtype=torch.float32), reduction="sum"
         )
+
+    def unfreeze_encoder(self) -> None:
+        """ un-freezes the encoder layer. """
+        if self._frozen:
+            log.info(f"\n-- Encoder model fine-tuning")
+            for param in self.bert.parameters():
+                param.requires_grad = True
+
+    def freeze_encoder(self) -> None:
+        """ freezes the encoder layer. """
+        for param in self.bert.parameters():
+            param.requires_grad = False
 
     def forward(self, tokens, lengths):
         """ Usual pytorch forward function.
@@ -234,6 +254,11 @@ class BERTClassifier(pl.LightningModule):
         )
         return [optimizer], []
 
+    def on_epoch_end(self):
+        """ Pytorch lightning hook """
+        if self.current_epoch + 1 >= self.nr_frozen_epochs:
+            self.unfreeze_encoder()
+
     def __retrieve_dataset(self, train=True, val=True, test=True):
         """ Retrieves task specific dataset """
         return sentiment_analysis_dataset(self.hparams, train, val, test)
@@ -300,8 +325,16 @@ class BERTClassifier(pl.LightningModule):
             type=str,
             help="Weights for each of the classes we want to tag.",
         )
+        parser.opt_list(
+            "--nr_frozen_epochs",
+            default=sys.maxsize,
+            type=int,
+            help="Number of epochs we want to keep the encoder model frozen.",
+            tunable=True,
+            options=[0, 1, 2, 3, 4, 5],
+        )
         parser.add_argument(
-            "--warmup_steps", default=1000, type=int, help="Scheduler warmup steps.",
+            "--warmup_steps", default=200, type=int, help="Scheduler warmup steps.",
         )
         parser.opt_list(
             "--dropout",
@@ -315,19 +348,19 @@ class BERTClassifier(pl.LightningModule):
         # Data Args:
         parser.add_argument(
             "--train_csv",
-            default="data/amazon_reviews_train.csv",
+            default="data/imdb_reviews_train.csv",
             type=str,
             help="Path to the file containing the train data.",
         )
         parser.add_argument(
             "--dev_csv",
-            default="data/amazon_reviews_test.csv",
+            default="data/imdb_reviews_test.csv",
             type=str,
             help="Path to the file containing the dev data.",
         )
         parser.add_argument(
             "--test_csv",
-            default="data/amazon_reviews_test.csv",
+            default="data/imdb_reviews_test.csv",
             type=str,
             help="Path to the file containing the dev data.",
         )

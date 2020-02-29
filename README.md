@@ -45,6 +45,8 @@ optional arguments:
                               size N before doing a backwards pass.
   --log_gpu_memory            Uses the output of nvidia-smi to log GPU usage. \
                               Might slow performance.
+  --val_percent_check         If you dont want to use the entire dev set, set \
+                              how much of the dev set you want to use with this flag.      
 ```
 
 Early Stopping/Checkpoint arguments:
@@ -79,7 +81,8 @@ python training.py \
     --distributed_backend dp \
     --batch_size 16 \
     --loader_workers 12 \
-    --log_gpu_memory all
+    --val_percent_check 0.2 \
+    --nr_frozen_epochs 1
 ```
 
 ### Tensorboard:
