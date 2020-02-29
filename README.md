@@ -72,6 +72,16 @@ optional arguments:
   --loader_workers            How many subprocesses to use for data loading.
 ```
 
+Training command example:
+```bash
+python training.py \
+    --gpus 2 \
+    --distributed_backend dp \
+    --batch_size 16 \
+    --loader_workers 12 \
+    --log_gpu_memory all
+```
+
 ### Tensorboard:
 
 Launch tensorboard with:
