@@ -1,6 +1,8 @@
 """
 Runs a script to interact with a model using the shell.
 """
+import os
+
 import pandas as pd
 
 from bert_classifier import BERTClassifier
@@ -34,13 +36,15 @@ if __name__ == "__main__":
     parser = HyperOptArgumentParser(description="Minimalist BERT Classifier", add_help=True)
     parser.add_argument(
         "--experiment",
-        required=True
+        required=True,
         type=str,
         help="Path to the experiment folder.",
     )
     hparams = parser.parse_args()
+    print ("Loading model...")
     model = load_model_from_experiment(hparams.experiment)
-    
+    print (model)
+
     while (1):
         print ("Please write a movie review or quit to exit the interactive shell:")
         # Get input sentence
@@ -48,5 +52,4 @@ if __name__ == "__main__":
         if input_sentence == 'q' or input_sentence == 'quit': break
         prediction = model.predict(sample={"text": input_sentence})
         print (prediction)
-
 
