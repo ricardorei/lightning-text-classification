@@ -82,7 +82,7 @@ class BERTClassifier(pl.LightningModule):
         """ freezes the encoder layer. """
         for param in self.bert.parameters():
             param.requires_grad = False
-    
+
     def predict(self, sample: dict) -> dict:
         """ Predict function.
         :param sample: dictionary with the text we want to classify.
@@ -129,7 +129,7 @@ class BERTClassifier(pl.LightningModule):
         sentemb = torch.sum(word_embeddings, 1)
         sum_mask = mask.unsqueeze(-1).expand(word_embeddings.size()).float().sum(1)
         sentemb = sentemb / sum_mask
-        
+
         return {"logits": self.classification_head(sentemb)}
 
     def loss(self, predictions: dict, targets: dict) -> torch.tensor:

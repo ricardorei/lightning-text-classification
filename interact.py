@@ -33,23 +33,22 @@ def load_model_from_experiment(experiment_folder: str):
 
 
 if __name__ == "__main__":
-    parser = HyperOptArgumentParser(description="Minimalist BERT Classifier", add_help=True)
+    parser = HyperOptArgumentParser(
+        description="Minimalist BERT Classifier", add_help=True
+    )
     parser.add_argument(
-        "--experiment",
-        required=True,
-        type=str,
-        help="Path to the experiment folder.",
+        "--experiment", required=True, type=str, help="Path to the experiment folder.",
     )
     hparams = parser.parse_args()
-    print ("Loading model...")
+    print("Loading model...")
     model = load_model_from_experiment(hparams.experiment)
-    print (model)
+    print(model)
 
-    while (1):
-        print ("Please write a movie review or quit to exit the interactive shell:")
+    while 1:
+        print("Please write a movie review or quit to exit the interactive shell:")
         # Get input sentence
-        input_sentence = input('> ')
-        if input_sentence == 'q' or input_sentence == 'quit': break
+        input_sentence = input("> ")
+        if input_sentence == "q" or input_sentence == "quit":
+            break
         prediction = model.predict(sample={"text": input_sentence})
-        print (prediction)
-
+        print(prediction)

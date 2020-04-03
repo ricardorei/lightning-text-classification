@@ -156,7 +156,7 @@ if __name__ == "__main__":
         default=None,
         help="Uses the output of nvidia-smi to log GPU usage. \
             Might slow performance.",
-    )  
+    )
 
     parser.add_argument(
         "--val_percent_check",
