@@ -8,6 +8,7 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from test_tube import HyperOptArgumentParser
 from utils import setup_testube_logger
+from torchnlp.random import set_seed
 
 
 def main(hparams) -> None:
@@ -15,6 +16,7 @@ def main(hparams) -> None:
     Main training routine specific for this project
     :param hparams:
     """
+    set_seed(hparams.seed)
     # ------------------------
     # 1 INIT LIGHTNING MODEL
     # ------------------------
@@ -82,7 +84,7 @@ if __name__ == "__main__":
     parser = HyperOptArgumentParser(
         strategy="random_search",
         description="Minimalist BERT Classifier",
-        add_help=False,
+        add_help=True,
     )
     parser.add_argument("--seed", type=int, default=3, help="Training seed.")
     parser.add_argument(
@@ -104,7 +106,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--patience",
-        default=1,
+        default=3,
         type=int,
         help="Number of epochs with no improvement \
             after which training will be stopped.",
@@ -117,18 +119,18 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--max_epochs",
-        default=2,
+        default=10,
         type=int,
         help="Limits training to a max number number of epochs",
     )
 
     # Batching
     parser.add_argument(
-        "--batch_size", default=16, type=int, help="Batch size to be used."
+        "--batch_size", default=6, type=int, help="Batch size to be used."
     )
     parser.add_argument(
         "--accumulate_grad_batches",
-        default=1,
+        default=2,
         type=int,
         help="Accumulated gradients runs K small batches of size N before \
             doing a backwards pass.",
@@ -154,7 +156,7 @@ if __name__ == "__main__":
         default=None,
         help="Uses the output of nvidia-smi to log GPU usage. \
             Might slow performance.",
-    )  
+    )
 
     parser.add_argument(
         "--val_percent_check",

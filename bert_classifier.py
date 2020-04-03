@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import logging as log
 from collections import OrderedDict
-import sys
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader, RandomSampler
-from transformers import BertModel, get_constant_schedule_with_warmup
+from transformers import BertModel
 
 import pytorch_lightning as pl
 from bert_tokenizer import BERTTextEncoder
@@ -53,26 +53,23 @@ class BERTClassifier(pl.LightningModule):
         self.tokenizer = BERTTextEncoder("bert-base-uncased")
 
         # Label Encoder
-        self.label_set = {"neg": 0, "pos": 1}
         self.label_encoder = LabelEncoder(
-            list(self.label_set.keys()), reserved_labels=[]
+            self.hparams.label_set.split(","), reserved_labels=[]
         )
+        self.label_encoder.unknown_index = None
 
         # Classification head
         self.classification_head = nn.Sequential(
-            nn.Dropout(self.hparams.dropout),
+            nn.Linear(768, 1536),
+            nn.Tanh(),
+            nn.Linear(1536, 768),
+            nn.Tanh(),
             nn.Linear(768, self.label_encoder.vocab_size),
         )
 
     def __build_loss(self):
         """ Initializes the loss function/s. """
-        if self.hparams.class_weights != "ignore":
-            weights = [float(x) for x in self.hparams.class_weights.split(",")]
-            self._loss = nn.CrossEntropyLoss(
-                weight=torch.tensor(weights, dtype=torch.float32), reduction="sum"
-            )
-        else:
-            self._loss = nn.CrossEntropyLoss(reduction="sum")
+        self._loss = nn.CrossEntropyLoss()
 
     def unfreeze_encoder(self) -> None:
         """ un-freezes the encoder layer. """
@@ -85,6 +82,28 @@ class BERTClassifier(pl.LightningModule):
         """ freezes the encoder layer. """
         for param in self.bert.parameters():
             param.requires_grad = False
+
+    def predict(self, sample: dict) -> dict:
+        """ Predict function.
+        :param sample: dictionary with the text we want to classify.
+
+        Returns:
+            Dictionary with the input text and the predicted label.
+        """
+        if self.training:
+            self.eval()
+
+        with torch.no_grad():
+            model_input, _ = self.prepare_sample([sample], prepare_target=False)
+            model_out = self.forward(**model_input)
+            logits = model_out["logits"].numpy()
+            predicted_labels = [
+                self.label_encoder.index_to_token[prediction]
+                for prediction in np.argmax(logits, axis=1)
+            ]
+            sample["predicted_label"] = predicted_labels[0]
+
+        return sample
 
     def forward(self, tokens, lengths):
         """ Usual pytorch forward function.
@@ -143,8 +162,11 @@ class BERTClassifier(pl.LightningModule):
             return inputs, {}
 
         # Prepare target:
-        targets = {"labels": self.label_encoder.batch_encode(sample["label"])}
-        return inputs, targets
+        try:
+            targets = {"labels": self.label_encoder.batch_encode(sample["label"])}
+            return inputs, targets
+        except RuntimeError:
+            raise Exception("Label encoder found an unknown label.")
 
     def training_step(self, batch: tuple, batch_nb: int, *args, **kwargs) -> dict:
         """ 
@@ -211,10 +233,6 @@ class BERTClassifier(pl.LightningModule):
         Returns:
             - Dictionary with metrics to be added to the lightning logger.  
         """
-        # if returned a scalar from validation_step, outputs is a list of tensor scalars
-        # we return just the average in this case (if we want)
-        # return torch.stack(outputs).mean()
-
         val_loss_mean = 0
         val_acc_mean = 0
         for output in outputs:
@@ -252,9 +270,6 @@ class BERTClassifier(pl.LightningModule):
             },
         ]
         optimizer = optim.Adam(parameters, lr=self.hparams.learning_rate)
-        scheduler = get_constant_schedule_with_warmup(
-            optimizer, self.hparams.warmup_steps
-        )
         return [optimizer], []
 
     def on_epoch_end(self):
@@ -322,33 +337,21 @@ class BERTClassifier(pl.LightningModule):
             type=float,
             help="Classification head learning rate.",
         )
-        parser.add_argument(
-            "--class_weights",
-            default="ignore",
-            type=str,
-            help="Weights for each of the classes we want to tag.",
-        )
         parser.opt_list(
             "--nr_frozen_epochs",
-            default=sys.maxsize,
+            default=1,
             type=int,
             help="Number of epochs we want to keep the encoder model frozen.",
             tunable=True,
             options=[0, 1, 2, 3, 4, 5],
         )
-        parser.add_argument(
-            "--warmup_steps", default=200, type=int, help="Scheduler warmup steps.",
-        )
-        parser.opt_list(
-            "--dropout",
-            default=0.1,
-            type=float,
-            help="Dropout to be applied to the BERT embeddings.",
-            tunable=True,
-            options=[0.1, 0.2, 0.3, 0.4, 0.5],
-        )
-
         # Data Args:
+        parser.add_argument(
+            "--label_set",
+            default="pos,neg",
+            type=str,
+            help="Classification labels set.",
+        )
         parser.add_argument(
             "--train_csv",
             default="data/imdb_reviews_train.csv",
