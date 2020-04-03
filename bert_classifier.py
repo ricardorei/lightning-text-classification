@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import logging as log
-import sys
 from collections import OrderedDict
 
 import numpy as np
@@ -8,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader, RandomSampler
-from transformers import BertModel, get_constant_schedule_with_warmup
+from transformers import BertModel
 
 import pytorch_lightning as pl
 from bert_tokenizer import BERTTextEncoder
