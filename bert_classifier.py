@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import logging as log
-from collections import OrderedDict
 import sys
+from collections import OrderedDict
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch import optim
@@ -101,10 +102,9 @@ class BERTClassifier(pl.LightningModule):
                 self.label_encoder.index_to_token[prediction]
                 for prediction in np.argmax(logits, axis=1)
             ]
-            for i in range(len(sample)):
-                sample[i]["predicted_label"] = predicted_labels[i]
+            sample["predicted_label"] = predicted_labels[0]
 
-        return sample[0]
+        return sample
 
     def forward(self, tokens, lengths):
         """ Usual pytorch forward function.
