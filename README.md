@@ -77,11 +77,17 @@ optional arguments:
 Training command example:
 ```bash
 python training.py \
-    --gpus 2 \
+    --gpus 1 \
     --distributed_backend dp \
-    --batch_size 16 \
-    --loader_workers 12 \
+    --batch_size 6 \
+    --accumulate_grad_batches 2 \
+    --loader_workers 4 \
     --nr_frozen_epochs 1
+```
+
+Testing the model on shell:
+```bash
+python interact.py --experiment experiments/lightning_logs/version_{date}
 ```
 
 ### Tensorboard:
