@@ -41,12 +41,11 @@ def main(hparams) -> None:
         early_stop_callback=early_stop_callback,
         default_save_path="experiments/",
         gpus=hparams.gpus,
-        distributed_backend=hparams.distributed_backend,
-        use_amp=hparams.use_16bit,
+        distributed_backend="dp",
+        use_amp=False,
         max_epochs=hparams.max_epochs,
         min_epochs=hparams.min_epochs,
         accumulate_grad_batches=hparams.accumulate_grad_batches,
-        log_gpu_memory=hparams.log_gpu_memory,
         val_percent_check=hparams.val_percent_check,
     )
 
@@ -108,8 +107,10 @@ if __name__ == "__main__":
         "--patience",
         default=3,
         type=int,
-        help="Number of epochs with no improvement \
-            after which training will be stopped.",
+        help=(
+            "Number of epochs with no improvement "
+            "after which training will be stopped."
+        ),
     )
     parser.add_argument(
         "--min_epochs",
@@ -132,38 +133,22 @@ if __name__ == "__main__":
         "--accumulate_grad_batches",
         default=2,
         type=int,
-        help="Accumulated gradients runs K small batches of size N before \
-            doing a backwards pass.",
+        help=(
+            "Accumulated gradients runs K small batches of size N before "
+            "doing a backwards pass."
+        ),
     )
 
     # gpu args
-    parser.add_argument("--gpus", type=int, default=2, help="How many gpus")
-    parser.add_argument(
-        "--distributed_backend",
-        type=str,
-        default="dp",
-        help="Supports three options dp, ddp, ddp2",
-    )
-    parser.add_argument(
-        "--use_16bit",
-        dest="use_16bit",
-        action="store_true",
-        help="If true uses 16 bit precision",
-    )
-    parser.add_argument(
-        "--log_gpu_memory",
-        type=str,
-        default=None,
-        help="Uses the output of nvidia-smi to log GPU usage. \
-            Might slow performance.",
-    )
-
+    parser.add_argument("--gpus", type=int, default=1, help="How many gpus")
     parser.add_argument(
         "--val_percent_check",
         default=1.0,
         type=float,
-        help="If you don't want to use the entire dev set (for debugging or \
-            if it's huge), set how much of the dev set you want to use with this flag.",
+        help=(
+            "If you don't want to use the entire dev set (for debugging or "
+            "if it's huge), set how much of the dev set you want to use with this flag."
+        ),
     )
 
     # each LightningModule defines arguments relevant to it
