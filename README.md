@@ -38,13 +38,9 @@ Training arguments:
 ```bash
 optional arguments:
   --seed                      Training seed.
-  --distributed_backend       Supports three options: dp
-  --use_16bit                 If true uses 16 bit precision
   --batch_size                Batch size to be used.
   --accumulate_grad_batches   Accumulated gradients runs K small batches of \
                               size N before doing a backwards pass.
-  --log_gpu_memory            Uses the output of nvidia-smi to log GPU usage. \
-                              Might slow performance.
   --val_percent_check         If you dont want to use the entire dev set, set \
                               how much of the dev set you want to use with this flag.      
 ```
@@ -63,10 +59,9 @@ Model arguments:
 
 ```bash
 optional arguments:
+  --encoder_model             BERT encoder model to be used.
   --encoder_learning_rate     Encoder specific learning rate.
   --learning_rate             Classification head learning rate.
-  --class_weights             Weights for each of the classes we want to tag.
-  --warmup_steps              Scheduler warmup steps.
   --dropout                   Dropout to be applied to the BERT embeddings.
   --train_csv                 Path to the file containing the train data.
   --dev_csv                   Path to the file containing the dev data.
@@ -75,15 +70,20 @@ optional arguments:
   --label_set                 Set of labels we want to use in our classification task (e.g: 'pos,neg')
 ```
 
+**Note:**
+After BERT several BERT-like models were released. You can test different size models like Mini-BERT and DistilBERT which are much smaller.
+- Mini-BERT only contains 2 encoder layers with hidden sizes of 128 features. Use it with the flag: `--encoder_model google/bert_uncased_L-2_H-128_A-2`
+- DistilBERT contains only 6 layers with hidden sizes of 768 features. Use it with the flag: `--encoder_model distilbert-base-uncased`
+
 Training command example:
 ```bash
 python training.py \
     --gpus 1 \
-    --distributed_backend dp \
-    --batch_size 6 \
-    --accumulate_grad_batches 2 \
-    --loader_workers 4 \
-    --nr_frozen_epochs 1
+    --batch_size 32 \
+    --accumulate_grad_batches 1 \
+    --loader_workers 8 \
+    --nr_frozen_epochs 1 \
+    --encoder_model distilbert-base-uncased
 ```
 
 Testing the model on shell:

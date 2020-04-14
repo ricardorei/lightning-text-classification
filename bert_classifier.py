@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader, RandomSampler
-from transformers import BertModel
+from transformers import AutoModel
 
 import pytorch_lightning as pl
 from bert_tokenizer import BERTTextEncoder
@@ -37,7 +37,6 @@ class BERTClassifier(pl.LightningModule):
         self.__build_loss()
 
         if hparams.nr_frozen_epochs > 0:
-            self._frozen = True
             self.freeze_encoder()
         else:
             self._frozen = False
@@ -45,9 +44,15 @@ class BERTClassifier(pl.LightningModule):
 
     def __build_model(self) -> None:
         """ Init BERT model + tokenizer + classification head."""
-        self.bert = BertModel.from_pretrained(
-            "bert-base-uncased", output_hidden_states=True
+        self.bert = AutoModel.from_pretrained(
+            self.hparams.encoder_model, output_hidden_states=True
         )
+
+        # set the number of features our encoder model will return...
+        if self.hparams.encoder_model == "google/bert_uncased_L-2_H-128_A-2":
+            self.encoder_features = 128
+        else:
+            self.encoder_features = 768
 
         # Tokenizer
         self.tokenizer = BERTTextEncoder("bert-base-uncased")
@@ -60,11 +65,11 @@ class BERTClassifier(pl.LightningModule):
 
         # Classification head
         self.classification_head = nn.Sequential(
-            nn.Linear(768, 1536),
+            nn.Linear(self.encoder_features, self.encoder_features * 2),
             nn.Tanh(),
-            nn.Linear(1536, 768),
+            nn.Linear(self.encoder_features * 2, self.encoder_features),
             nn.Tanh(),
-            nn.Linear(768, self.label_encoder.vocab_size),
+            nn.Linear(self.encoder_features, self.label_encoder.vocab_size),
         )
 
     def __build_loss(self):
@@ -77,11 +82,13 @@ class BERTClassifier(pl.LightningModule):
             log.info(f"\n-- Encoder model fine-tuning")
             for param in self.bert.parameters():
                 param.requires_grad = True
+            self._frozen = False
 
     def freeze_encoder(self) -> None:
         """ freezes the encoder layer. """
         for param in self.bert.parameters():
             param.requires_grad = False
+        self._frozen = True
 
     def predict(self, sample: dict) -> dict:
         """ Predict function.
@@ -325,6 +332,12 @@ class BERTClassifier(pl.LightningModule):
         Returns:
             - updated parser
         """
+        parser.add_argument(
+            "--encoder_model",
+            default="bert-base-uncased",
+            type=str,
+            help="Encoder model to be used.",
+        )
         parser.add_argument(
             "--encoder_learning_rate",
             default=1e-05,

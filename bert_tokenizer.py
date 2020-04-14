@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import torch
-from transformers import BertTokenizer
+from transformers import AutoTokenizer
 
 from torchnlp.encoders import Encoder
 from torchnlp.encoders.text import stack_and_pad_tensors
@@ -14,7 +14,7 @@ class BERTTextEncoder(TextEncoder):
 
     def __init__(self, pretrained_model) -> None:
         self.enforce_reversible = False
-        self.tokenizer = BertTokenizer.from_pretrained(pretrained_model)
+        self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
         self.itos = self.tokenizer.ids_to_tokens
 
     @property
