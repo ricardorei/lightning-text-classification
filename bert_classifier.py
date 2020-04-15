@@ -127,7 +127,7 @@ class BERTClassifier(pl.LightningModule):
         mask = lengths_to_mask(lengths, device=tokens.device)
 
         # Run BERT model.
-        word_embeddings, _, _ = self.bert(tokens, mask)
+        word_embeddings = self.bert(tokens, mask)[0]
 
         # Average Pooling
         word_embeddings = mask_fill(
