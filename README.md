@@ -88,7 +88,7 @@ python training.py \
 
 Testing the model on shell:
 ```bash
-python interact.py --experiment experiments/lightning_logs/version_{date}
+python interact.py --experiment experiments/version_{date}
 ```
 
 
@@ -96,7 +96,7 @@ python interact.py --experiment experiments/lightning_logs/version_{date}
 
 Launch tensorboard with:
 ```bash
-tensorboard --logdir="experiments/lightning_logs/"
+tensorboard --logdir="experiments/"
 ```
 
 ### Code Style:
