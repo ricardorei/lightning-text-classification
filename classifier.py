@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging as log
+from argparse import ArgumentParser, Namespace
 from collections import OrderedDict
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 from torch import optim
@@ -10,26 +12,83 @@ from torch.utils.data import DataLoader, RandomSampler
 from transformers import AutoModel
 
 import pytorch_lightning as pl
-from bert_tokenizer import BERTTextEncoder
-from dataloader import sentiment_analysis_dataset
-from test_tube import HyperOptArgumentParser
+from tokenizer import Tokenizer
 from torchnlp.encoders import LabelEncoder
 from torchnlp.utils import collate_tensors, lengths_to_mask
 from utils import mask_fill
 
 
-class BERTClassifier(pl.LightningModule):
+class Classifier(pl.LightningModule):
     """
-    Sample model to show how to use BERT to classify sentences.
+    Sample model to show how to use a Transformer model to classify sentences.
     
     :param hparams: ArgumentParser containing the hyperparameters.
     """
+    
+    class DataModule(pl.LightningDataModule):
+        def __init__(self, classifier_instance):
+            super().__init__()
+            self.hparams = classifier_instance.hparams
+            self.classifier = classifier_instance
+            # Label Encoder
+            self.label_encoder = LabelEncoder(
+                pd.read_csv(self.hparams.train_csv).label.unique().tolist(), 
+                reserved_labels=[]
+            )
+            self.label_encoder.unknown_index = None
 
-    def __init__(self, hparams) -> None:
-        super(BERTClassifier, self).__init__()
+        def read_csv(self, path: str) -> list:
+            """ Reads a comma separated value file.
+
+            :param path: path to a csv file.
+            
+            :return: List of records as dictionaries
+            """
+            df = pd.read_csv(path)
+            df = df[["text", "label"]]
+            df["text"] = df["text"].astype(str)
+            df["label"] = df["label"].astype(str)
+            return df.to_dict("records")
+
+        def train_dataloader(self) -> DataLoader:
+            """ Function that loads the train set. """
+            self._train_dataset = self.read_csv(self.hparams.train_csv)
+            return DataLoader(
+                dataset=self._train_dataset,
+                sampler=RandomSampler(self._train_dataset),
+                batch_size=self.hparams.batch_size,
+                collate_fn=self.classifier.prepare_sample,
+                num_workers=self.hparams.loader_workers,
+            )
+
+        def val_dataloader(self) -> DataLoader:
+            """ Function that loads the validation set. """
+            self._dev_dataset = self.read_csv(self.hparams.dev_csv)
+            return DataLoader(
+                dataset=self._dev_dataset,
+                batch_size=self.hparams.batch_size,
+                collate_fn=self.classifier.prepare_sample,
+                num_workers=self.hparams.loader_workers,
+            )
+
+        def test_dataloader(self) -> DataLoader:
+            """ Function that loads the validation set. """
+            self._test_dataset = self.read_csv(self.hparams.test_csv)
+            return DataLoader(
+                dataset=self._test_dataset,
+                batch_size=self.hparams.batch_size,
+                collate_fn=self.classifier.prepare_sample,
+                num_workers=self.hparams.loader_workers,
+            )
+
+    def __init__(self, hparams: Namespace) -> None:
+        super(Classifier, self).__init__()
         self.hparams = hparams
         self.batch_size = hparams.batch_size
 
+        # Build Data module
+        self.data = self.DataModule(self)
+        
         # build model
         self.__build_model()
 
@@ -55,13 +114,7 @@ class BERTClassifier(pl.LightningModule):
             self.encoder_features = 768
 
         # Tokenizer
-        self.tokenizer = BERTTextEncoder("bert-base-uncased")
-
-        # Label Encoder
-        self.label_encoder = LabelEncoder(
-            self.hparams.label_set.split(","), reserved_labels=[]
-        )
-        self.label_encoder.unknown_index = None
+        self.tokenizer = Tokenizer("bert-base-uncased")
 
         # Classification head
         self.classification_head = nn.Sequential(
@@ -69,7 +122,7 @@ class BERTClassifier(pl.LightningModule):
             nn.Tanh(),
             nn.Linear(self.encoder_features * 2, self.encoder_features),
             nn.Tanh(),
-            nn.Linear(self.encoder_features, self.label_encoder.vocab_size),
+            nn.Linear(self.encoder_features, self.data.label_encoder.vocab_size),
         )
 
     def __build_loss(self):
@@ -105,7 +158,7 @@ class BERTClassifier(pl.LightningModule):
             model_out = self.forward(**model_input)
             logits = model_out["logits"].numpy()
             predicted_labels = [
-                self.label_encoder.index_to_token[prediction]
+                self.data.label_encoder.index_to_token[prediction]
                 for prediction in np.argmax(logits, axis=1)
             ]
             sample["predicted_label"] = predicted_labels[0]
@@ -170,7 +223,7 @@ class BERTClassifier(pl.LightningModule):
 
         # Prepare target:
         try:
-            targets = {"labels": self.label_encoder.batch_encode(sample["label"])}
+            targets = {"labels": self.data.label_encoder.batch_encode(sample["label"])}
             return inputs, targets
         except RuntimeError:
             raise Exception("Label encoder found an unknown label.")
@@ -283,51 +336,13 @@ class BERTClassifier(pl.LightningModule):
         """ Pytorch lightning hook """
         if self.current_epoch + 1 >= self.nr_frozen_epochs:
             self.unfreeze_encoder()
-
-    def __retrieve_dataset(self, train=True, val=True, test=True):
-        """ Retrieves task specific dataset """
-        return sentiment_analysis_dataset(self.hparams, train, val, test)
-
-    @pl.data_loader
-    def train_dataloader(self) -> DataLoader:
-        """ Function that loads the train set. """
-        self._train_dataset = self.__retrieve_dataset(val=False, test=False)[0]
-        return DataLoader(
-            dataset=self._train_dataset,
-            sampler=RandomSampler(self._train_dataset),
-            batch_size=self.hparams.batch_size,
-            collate_fn=self.prepare_sample,
-            num_workers=self.hparams.loader_workers,
-        )
-
-    @pl.data_loader
-    def val_dataloader(self) -> DataLoader:
-        """ Function that loads the validation set. """
-        self._dev_dataset = self.__retrieve_dataset(train=False, test=False)[0]
-        return DataLoader(
-            dataset=self._dev_dataset,
-            batch_size=self.hparams.batch_size,
-            collate_fn=self.prepare_sample,
-            num_workers=self.hparams.loader_workers,
-        )
-
-    @pl.data_loader
-    def test_dataloader(self) -> DataLoader:
-        """ Function that loads the validation set. """
-        self._test_dataset = self.__retrieve_dataset(train=False, val=False)[0]
-        return DataLoader(
-            dataset=self._test_dataset,
-            batch_size=self.hparams.batch_size,
-            collate_fn=self.prepare_sample,
-            num_workers=self.hparams.loader_workers,
-        )
-
+    
     @classmethod
     def add_model_specific_args(
-        cls, parser: HyperOptArgumentParser
-    ) -> HyperOptArgumentParser:
+        cls, parser: ArgumentParser
+    ) -> ArgumentParser:
         """ Parser for Estimator specific arguments/hyperparameters. 
-        :param parser: HyperOptArgumentParser obj
+        :param parser: argparse.ArgumentParser
 
         Returns:
             - updated parser
@@ -350,20 +365,11 @@ class BERTClassifier(pl.LightningModule):
             type=float,
             help="Classification head learning rate.",
         )
-        parser.opt_list(
+        parser.add_argument(
             "--nr_frozen_epochs",
             default=1,
             type=int,
             help="Number of epochs we want to keep the encoder model frozen.",
-            tunable=True,
-            options=[0, 1, 2, 3, 4, 5],
-        )
-        # Data Args:
-        parser.add_argument(
-            "--label_set",
-            default="pos,neg",
-            type=str,
-            help="Classification labels set.",
         )
         parser.add_argument(
             "--train_csv",

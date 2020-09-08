@@ -83,7 +83,7 @@ python training.py \
     --accumulate_grad_batches 1 \
     --loader_workers 8 \
     --nr_frozen_epochs 1 \
-    --encoder_model distilbert-base-uncased
+    --encoder_model google/bert_uncased_L-2_H-128_A-2
 ```
 
 Testing the model on shell:

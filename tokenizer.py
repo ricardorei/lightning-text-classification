@@ -7,7 +7,7 @@ from torchnlp.encoders.text import stack_and_pad_tensors
 from torchnlp.encoders.text.text_encoder import TextEncoder
 
 
-class BERTTextEncoder(TextEncoder):
+class Tokenizer(TextEncoder):
     """
     Wrapper arround BERT tokenizer.
     """
@@ -57,25 +57,29 @@ class BERTTextEncoder(TextEncoder):
         """ Encodes a 'sequence'.
         :param sequence: String 'sequence' to encode.
         
-        Returns:
-            - torch.Tensor: Encoding of the 'sequence'.
+        :return: torch.Tensor with Encoding of the `sequence`.
         """
         sequence = TextEncoder.encode(self, sequence)
-        vector = self.tokenizer.encode(sequence)
-        return torch.tensor(vector)
+        return self.tokenizer(sequence, return_tensors="pt")["input_ids"][0]
 
-    def batch_encode(self, iterator, dim=0, **kwargs) -> (torch.Tensor, torch.Tensor):
+    def batch_encode(self, sentences: list) -> (torch.Tensor, torch.Tensor):
         """
         :param iterator (iterator): Batch of text to encode.
-        :param dim (int, optional): Dimension along which to concatenate tensors.
         :param **kwargs: Keyword arguments passed to 'encode'.
             
         Returns
             torch.Tensor, torch.Tensor: Encoded and padded batch of sequences; Original lengths of
                 sequences.
         """
-        return stack_and_pad_tensors(
-            Encoder.batch_encode(self, iterator, **kwargs),
-            padding_index=self.padding_index,
-            dim=dim,
+        tokenizer_output = self.tokenizer(
+            sentences, 
+            return_tensors="pt", 
+            padding=True, 
+            return_length=True, 
+            return_token_type_ids=False, 
+            return_attention_mask=False,
+            truncation="only_first",
+            max_length=512
         )
+        return tokenizer_output["input_ids"], tokenizer_output["length"]
+    

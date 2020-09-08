@@ -1,13 +1,14 @@
 """
 Runs a model on a single node across N-gpus.
 """
+import argparse
 import os
+from datetime import datetime
 
-from bert_classifier import BERTClassifier
+from classifier import Classifier
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from test_tube import HyperOptArgumentParser
-from utils import setup_testube_logger
+from pytorch_lightning.loggers import LightningLoggerBase, TensorBoardLogger
 from torchnlp.random import set_seed
 
 
@@ -18,10 +19,10 @@ def main(hparams) -> None:
     """
     set_seed(hparams.seed)
     # ------------------------
-    # 1 INIT LIGHTNING MODEL
+    # 1 INIT LIGHTNING MODEL AND DATA
     # ------------------------
-    model = BERTClassifier(hparams)
-
+    model = Classifier(hparams)
+    
     # ------------------------
     # 2 INIT EARLY STOPPING
     # ------------------------
@@ -32,33 +33,25 @@ def main(hparams) -> None:
         verbose=True,
         mode=hparams.metric_mode,
     )
+
     # ------------------------
-    # 3 INIT TRAINER
+    # 3 INIT LOGGERS
     # ------------------------
-    trainer = Trainer(
-        logger=setup_testube_logger(),
-        checkpoint_callback=True,
-        early_stop_callback=early_stop_callback,
-        default_save_path="experiments/",
-        gpus=hparams.gpus,
-        distributed_backend="dp",
-        use_amp=False,
-        max_epochs=hparams.max_epochs,
-        min_epochs=hparams.min_epochs,
-        accumulate_grad_batches=hparams.accumulate_grad_batches,
-        val_percent_check=hparams.val_percent_check,
+    # Tensorboard Callback
+    tb_logger = TensorBoardLogger(
+        save_dir="experiments/",
+        version="version_" + datetime.now().strftime("%d-%m-%Y--%H-%M-%S"),
+        name="",
+    )
+
+    # Model Checkpoint Callback
+    ckpt_path = os.path.join(
+        "experiments/", tb_logger.version, "checkpoints",
     )
 
     # --------------------------------
     # 4 INIT MODEL CHECKPOINT CALLBACK
     # -------------------------------
-    ckpt_path = os.path.join(
-        trainer.default_save_path,
-        trainer.logger.name,
-        f"version_{trainer.logger.version}",
-        "checkpoints",
-    )
-    # initialize Model Checkpoint Saver
     checkpoint_callback = ModelCheckpoint(
         filepath=ckpt_path,
         save_top_k=hparams.save_top_k,
@@ -66,13 +59,32 @@ def main(hparams) -> None:
         monitor=hparams.monitor,
         period=1,
         mode=hparams.metric_mode,
+        save_weights_only=True
     )
-    trainer.checkpoint_callback = checkpoint_callback
 
     # ------------------------
-    # 5 START TRAINING
+    # 5 INIT TRAINER
     # ------------------------
-    trainer.fit(model)
+    trainer = Trainer(
+        logger=tb_logger,
+        checkpoint_callback=True,
+        early_stop_callback=early_stop_callback,
+        gradient_clip_val=1.0,
+        gpus=hparams.gpus,
+        log_gpu_memory="all",
+        deterministic=True,
+        check_val_every_n_epoch=1,
+        fast_dev_run=False,
+        accumulate_grad_batches=hparams.accumulate_grad_batches,
+        max_epochs=hparams.max_epochs,
+        min_epochs=hparams.min_epochs,
+        val_check_interval=hparams.val_check_interval,
+        distributed_backend="dp",
+    )
+    # ------------------------
+    # 6 START TRAINING
+    # ------------------------
+    trainer.fit(model, model.data)
 
 
 if __name__ == "__main__":
@@ -80,9 +92,8 @@ if __name__ == "__main__":
     # TRAINING ARGUMENTS
     # ------------------------
     # these are project-wide arguments
-    parser = HyperOptArgumentParser(
-        strategy="random_search",
-        description="Minimalist BERT Classifier",
+    parser = argparse.ArgumentParser(
+        description="Minimalist Transformer Classifier",
         add_help=True,
     )
     parser.add_argument("--seed", type=int, default=3, help="Training seed.")
@@ -120,7 +131,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--max_epochs",
-        default=10,
+        default=20,
         type=int,
         help="Limits training to a max number number of epochs",
     )
@@ -142,7 +153,7 @@ if __name__ == "__main__":
     # gpu args
     parser.add_argument("--gpus", type=int, default=1, help="How many gpus")
     parser.add_argument(
-        "--val_percent_check",
+        "--val_check_interval",
         default=1.0,
         type=float,
         help=(
@@ -152,7 +163,7 @@ if __name__ == "__main__":
     )
 
     # each LightningModule defines arguments relevant to it
-    parser = BERTClassifier.add_model_specific_args(parser)
+    parser = Classifier.add_model_specific_args(parser)
     hparams = parser.parse_args()
 
     # ---------------------
