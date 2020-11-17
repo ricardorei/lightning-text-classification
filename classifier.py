@@ -32,7 +32,7 @@ class Classifier(pl.LightningModule):
             self.classifier = classifier_instance
             # Label Encoder
             self.label_encoder = LabelEncoder(
-                pd.read_csv(self.hparams.train_csv).label.unique().tolist(), 
+                pd.read_csv(self.hparams.train_csv).label.astype(str).unique().tolist(), 
                 reserved_labels=[]
             )
             self.label_encoder.unknown_index = None
@@ -222,6 +222,10 @@ class Classifier(pl.LightningModule):
             return inputs, {}
 
         # Prepare target:
+        print (sample["label"])
+        print ()
+        targets = {"labels": self.data.label_encoder.batch_encode(sample["label"])}
+            
         try:
             targets = {"labels": self.data.label_encoder.batch_encode(sample["label"])}
             return inputs, targets
