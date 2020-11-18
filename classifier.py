@@ -72,7 +72,7 @@ class Classifier(pl.LightningModule):
             )
 
         def test_dataloader(self) -> DataLoader:
-            """ Function that loads the validation set. """
+            """ Function that loads the test set. """
             self._test_dataset = self.read_csv(self.hparams.test_csv)
             return DataLoader(
                 dataset=self._test_dataset,
