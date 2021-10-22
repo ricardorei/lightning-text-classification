@@ -78,12 +78,14 @@ After BERT several BERT-like models were released. You can test different size m
 Training command example:
 ```bash
 python training.py \
-    --gpus 1 \
+    --gpus 0 \
     --batch_size 32 \
     --accumulate_grad_batches 1 \
     --loader_workers 8 \
     --nr_frozen_epochs 1 \
-    --encoder_model google/bert_uncased_L-2_H-128_A-2
+    --encoder_model google/bert_uncased_L-2_H-128_A-2 \
+    --train_csv data/MP2_train.csv \
+    --dev_csv data/MP2_dev.csv \
 ```
 
 Testing the model on shell:
