@@ -1,10 +1,13 @@
 """
-Runs a script to interact with a model using the shell.
+Tests model.
 """
 import os
 from argparse import ArgumentParser, Namespace
 
+import pandas as pd
 import yaml
+from sklearn.metrics import classification_report
+from tqdm import tqdm
 
 from classifier import Classifier
 
@@ -43,16 +46,24 @@ if __name__ == "__main__":
         type=str,
         help="Path to the experiment folder.",
     )
+    parser.add_argument(
+        "--test_data",
+        required=True,
+        type=str,
+        help="Path to the test data.",
+    )
+    hparams = parser.parse_args()
     hparams = parser.parse_args()
     print("Loading model...")
     model = load_model_from_experiment(hparams.experiment)
-    print(model)
+    # print(model)
 
-    while 1:
-        print("Please write a sentence or quit to exit the interactive shell:")
-        # Get input sentence
-        input_sentence = input("> ")
-        if input_sentence == "q" or input_sentence == "quit":
-            break
-        prediction = model.predict(sample={"text": input_sentence})
-        print(prediction)
+    testset = pd.read_csv(hparams.test_data).to_dict("records")
+    predictions = [
+        model.predict(sample)
+        for sample in tqdm(testset, desc="Testing on {}".format(hparams.test_data))
+    ]
+
+    y_pred = [o["predicted_label"] for o in predictions]
+    y_true = [s["label"] for s in testset]
+    print(classification_report(y_true, y_pred))

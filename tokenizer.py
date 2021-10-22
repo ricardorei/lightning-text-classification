@@ -19,22 +19,22 @@ class Tokenizer(TextEncoder):
 
     @property
     def unk_index(self) -> int:
-        """ Returns the index used for the unknown token. """
+        """Returns the index used for the unknown token."""
         return self.tokenizer.unk_token_id
 
     @property
     def bos_index(self) -> int:
-        """ Returns the index used for the begin-of-sentence token. """
+        """Returns the index used for the begin-of-sentence token."""
         return self.tokenizer.cls_token_id
 
     @property
     def eos_index(self) -> int:
-        """ Returns the index used for the end-of-sentence token. """
+        """Returns the index used for the end-of-sentence token."""
         return self.tokenizer.sep_token_id
 
     @property
     def padding_index(self) -> int:
-        """ Returns the index used for padding. """
+        """Returns the index used for padding."""
         return self.tokenizer.pad_token_id
 
     @property
@@ -54,9 +54,9 @@ class Tokenizer(TextEncoder):
         return len(self.itos)
 
     def encode(self, sequence: str) -> torch.Tensor:
-        """ Encodes a 'sequence'.
+        """Encodes a 'sequence'.
         :param sequence: String 'sequence' to encode.
-        
+
         :return: torch.Tensor with Encoding of the `sequence`.
         """
         sequence = TextEncoder.encode(self, sequence)
@@ -66,20 +66,19 @@ class Tokenizer(TextEncoder):
         """
         :param iterator (iterator): Batch of text to encode.
         :param **kwargs: Keyword arguments passed to 'encode'.
-            
+
         Returns
             torch.Tensor, torch.Tensor: Encoded and padded batch of sequences; Original lengths of
                 sequences.
         """
         tokenizer_output = self.tokenizer(
-            sentences, 
-            return_tensors="pt", 
-            padding=True, 
-            return_length=True, 
-            return_token_type_ids=False, 
+            sentences,
+            return_tensors="pt",
+            padding=True,
+            return_length=True,
+            return_token_type_ids=False,
             return_attention_mask=False,
             truncation="only_first",
-            max_length=512
+            max_length=512,
         )
         return tokenizer_output["input_ids"], tokenizer_output["length"]
-    

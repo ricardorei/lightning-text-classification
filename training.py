@@ -22,7 +22,7 @@ def main(hparams) -> None:
     # 1 INIT LIGHTNING MODEL AND DATA
     # ------------------------
     model = Classifier(hparams)
-    
+
     # ------------------------
     # 2 INIT EARLY STOPPING
     # ------------------------
@@ -46,7 +46,9 @@ def main(hparams) -> None:
 
     # Model Checkpoint Callback
     ckpt_path = os.path.join(
-        "experiments/", tb_logger.version, "checkpoints",
+        "experiments/",
+        tb_logger.version,
+        "checkpoints",
     )
 
     # --------------------------------
@@ -59,7 +61,7 @@ def main(hparams) -> None:
         monitor=hparams.monitor,
         period=1,
         mode=hparams.metric_mode,
-        save_weights_only=True
+        save_weights_only=True,
     )
 
     # ------------------------

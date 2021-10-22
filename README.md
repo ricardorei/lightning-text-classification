@@ -88,11 +88,10 @@ python training.py \
     --dev_csv data/MP2_dev.csv \
 ```
 
-Testing the model on shell:
+Testing the model:
 ```bash
-python interact.py --experiment experiments/version_{date}
+python test.py --experiment experiments/version_{date} --test_data data⁄MP2_test.csv
 ```
-
 
 ### Tensorboard:
 
