@@ -90,7 +90,7 @@ python training.py \
 
 Testing the model:
 ```bash
-python test.py --experiment experiments/version_{date} --test_data data⁄MP2_test.csv
+python test.py --experiment experiments/version_{date} --test_data data/MP2_dev.csv
 ```
 
 ### Tensorboard:
