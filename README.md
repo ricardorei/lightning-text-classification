@@ -67,7 +67,6 @@ optional arguments:
   --dev_csv                   Path to the file containing the dev data.
   --test_csv                  Path to the file containing the test data.
   --loader_workers            How many subprocesses to use for data loading.
-  --label_set                 Set of labels we want to use in our classification task (e.g: 'pos,neg')
 ```
 
 **Note:**
