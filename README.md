@@ -61,6 +61,7 @@ Model arguments:
 optional arguments:
   --encoder_model             BERT encoder model to be used.
   --encoder_learning_rate     Encoder specific learning rate.
+  --nr_frozen_epochs          Number of epochs we will keep the BERT parameters frozen.
   --learning_rate             Classification head learning rate.
   --dropout                   Dropout to be applied to the BERT embeddings.
   --train_csv                 Path to the file containing the train data.
