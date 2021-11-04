@@ -118,7 +118,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--patience",
-        default=3,
+        default=2,
         type=int,
         help=(
             "Number of epochs with no improvement "
@@ -133,7 +133,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--max_epochs",
-        default=20,
+        default=5,
         type=int,
         help="Limits training to a max number number of epochs",
     )
