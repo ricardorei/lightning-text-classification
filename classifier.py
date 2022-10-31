@@ -108,13 +108,10 @@ class Classifier(pl.LightningModule):
         )
 
         # set the number of features our encoder model will return...
-        if self.hparams.encoder_model == "google/bert_uncased_L-2_H-128_A-2":
-            self.encoder_features = 128
-        else:
-            self.encoder_features = 768
+        self.encoder_features = self.bert.config.hidden_size
 
         # Tokenizer
-        self.tokenizer = Tokenizer("bert-base-uncased")
+        self.tokenizer = Tokenizer(self.hparams.encoder_model)
 
         # Classification head
         self.classification_head = nn.Sequential(

@@ -2,6 +2,7 @@
 Tests model.
 """
 import os
+import json
 from argparse import ArgumentParser, Namespace
 
 import pandas as pd
@@ -52,7 +53,12 @@ if __name__ == "__main__":
         type=str,
         help="Path to the test data.",
     )
-    hparams = parser.parse_args()
+    parser.add_argument(
+        "--store_predictions", "-o",
+        required=False,
+        type=str,
+        help="Path to store predictions.",
+    )
     hparams = parser.parse_args()
     print("Loading model...")
     model = load_model_from_experiment(hparams.experiment)
@@ -63,7 +69,11 @@ if __name__ == "__main__":
         model.predict(sample)
         for sample in tqdm(testset, desc="Testing on {}".format(hparams.test_data))
     ]
-
     y_pred = [o["predicted_label"] for o in predictions]
     y_true = [s["label"] for s in testset]
     print(classification_report(y_true, y_pred))
+    print ("saving predictions at: {}".format(hparams.store_predictions))
+
+    with open(hparams.store_predictions, 'w', encoding='utf-8') as f:
+        json.dump(predictions, f, ensure_ascii=False, indent=4)
+
