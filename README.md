@@ -84,13 +84,13 @@ python training.py \
     --loader_workers 8 \
     --nr_frozen_epochs 1 \
     --encoder_model google/bert_uncased_L-2_H-128_A-2 \
-    --train_csv data/MP2_train.csv \
-    --dev_csv data/MP2_dev.csv \
+    --train_csv data/MP2_2022_train.csv \
+    --dev_csv data/MP2_2022_dev.csv \
 ```
 
 Testing the model:
 ```bash
-python test.py --experiment experiments/version_{date} --test_data data/MP2_dev.csv
+python test.py --experiment experiments/version_{date} --test_data data/MP2_2022_dev.csv
 ```
 
 ### Tensorboard:
