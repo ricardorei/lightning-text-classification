@@ -181,15 +181,15 @@ class Classifier(pl.LightningModule):
 
         # Run BERT model.
         word_embeddings = self.bert(tokens, mask)[0]
+        sentemb = word_embeddings[:, 0, :]
 
         # Average Pooling
-        word_embeddings = mask_fill(
-            0.0, tokens, word_embeddings, self.tokenizer.padding_index
-        )
-        sentemb = torch.sum(word_embeddings, 1)
-        sum_mask = mask.unsqueeze(-1).expand(word_embeddings.size()).float().sum(1)
-        sentemb = sentemb / sum_mask
-
+        #word_embeddings = mask_fill(
+        #    0.0, tokens, word_embeddings, self.tokenizer.padding_index
+        #)
+        #sentemb = torch.sum(word_embeddings, 1)
+        #sum_mask = mask.unsqueeze(-1).expand(word_embeddings.size()).float().sum(1)
+        #sentemb = sentemb / sum_mask
         return {"logits": self.classification_head(sentemb)}
 
     def loss(self, predictions: dict, targets: dict) -> torch.tensor:
@@ -247,11 +247,7 @@ class Classifier(pl.LightningModule):
         if self.trainer.use_dp or self.trainer.use_ddp2:
             loss_val = loss_val.unsqueeze(0)
 
-        tqdm_dict = {"train_loss": loss_val}
-        output = OrderedDict(
-            {"loss": loss_val, "progress_bar": tqdm_dict, "log": tqdm_dict}
-        )
-
+        output = OrderedDict({"loss": loss_val})
         # can also return just a scalar instead of a dict (return loss_val)
         return output
 
